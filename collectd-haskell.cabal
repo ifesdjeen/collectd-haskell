@@ -18,8 +18,8 @@ library
   build-depends:       base >=4.7 && <4.8
   hs-source-dirs:   src
   default-language:    Haskell2010
-  exposed-modules:  Collectd.C
-  -- exposed-modules:  Collectd.TestPlugin
+  -- exposed-modules:  Collectd.C
+  exposed-modules:  Collectd.TestPlugin
   other-extensions: CPP
                   , ForeignFunctionInterface
                   , EmptyDataDecls
@@ -29,7 +29,7 @@ library
 
   -- TODO: consider using version of base in order to find out a current verion of ghc
   -- THAT SHOYLD BE REQUIRED AS SOON AS YOU HAVE TO REBUILD AN "CORE" PLUGIN
-  ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -lHSrts-ghc7.8.3 -o collectd_haskell.so ./cbits/wrapper.o
-  -- ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -o test_plugin.so
+  -- ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -lHSrts-ghc7.8.3 -o collectd_haskell.so ./cbits/wrapper.o
+  ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -o test_plugin.so
   if (arch(i386) || arch(x86_64))
     cpp-options: -DARCH_X86
