@@ -1,0 +1,12 @@
+.DS_Store
+
+# Compiled Files
+
+*.o
+*.so
+
+*sandbox.config
+.\#
+.cabal-sandbox/
+dist
+*~
