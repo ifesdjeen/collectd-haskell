@@ -28,8 +28,10 @@ library
   Include-dirs:    include
 
   -- TODO: consider using version of base in order to find out a current verion of ghc
-  -- THAT SHOYLD BE REQUIRED AS SOON AS YOU HAVE TO REBUILD AN "CORE" PLUGIN
-  -- ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -lHSrts-ghc7.8.3 -o collectd_haskell.so ./cbits/wrapper.o
-  ghc-options:    -Wall -O2 -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -o test_plugin.so
+  -- THAT SHOULD BE REQUIRED AS SOON AS YOU HAVE TO REBUILD AN "CORE" PLUGIN
+  ghc-options:    -threaded -Wall -optc-DTHREADED_RTS -shared -dynamic -fPIC -lHSrts_thr-ghc7.8.3 -no-hs-main -o collectd_haskell.so ./cbits/wrapper.o
+  -- ghc-options:    -Wall -O2 -threaded -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -o test_plugin.so
+  -- ghc-options:    -threaded -fforce-recomp -shared -dynamic -fPIC -o test_plugin.so
+
   if (arch(i386) || arch(x86_64))
     cpp-options: -DARCH_X86
