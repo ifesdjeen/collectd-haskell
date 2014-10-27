@@ -16,10 +16,13 @@ cabal-version:       >=1.10
 
 library
   build-depends:       base >=4.7 && <4.8
-  hs-source-dirs:   src
+                       , bytestring
+  hs-source-dirs:      src
   default-language:    Haskell2010
-  -- exposed-modules:  Collectd.C
-  exposed-modules:  Collectd.TestPlugin
+  -- exposed-modules:  Collectd.Bar
+  exposed-modules:     Collectd.C
+                       , Collectd.Internal
+                       , Collectd.TestPlugin
   other-extensions: CPP
                   , ForeignFunctionInterface
                   , EmptyDataDecls
@@ -29,9 +32,9 @@ library
 
   -- TODO: consider using version of base in order to find out a current verion of ghc
   -- THAT SHOULD BE REQUIRED AS SOON AS YOU HAVE TO REBUILD AN "CORE" PLUGIN
-  ghc-options:    -threaded -Wall -optc-DTHREADED_RTS -shared -dynamic -fPIC -lHSrts_thr-ghc7.8.3 -no-hs-main -o collectd_haskell.so ./cbits/wrapper.o
+  -- ghc-options:    -threaded -Wall -optc-DTHREADED_RTS -shared -dynamic -fPIC -lHSrts_thr-ghc7.8.3 -no-hs-main -o collectd_haskell.so ./cbits/wrapper.o
   -- ghc-options:    -Wall -O2 -threaded -optc-O3 -fwarn-tabs -shared -dynamic -fPIC -o test_plugin.so
-  -- ghc-options:    -threaded -fforce-recomp -shared -dynamic -fPIC -o test_plugin.so
+  ghc-options:    -threaded -fforce-recomp -shared -dynamic -fPIC -o test_plugin.so
 
   if (arch(i386) || arch(x86_64))
     cpp-options: -DARCH_X86
