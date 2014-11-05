@@ -73,14 +73,64 @@ type UserDataPtr     = Ptr UserData
 data ValueList
 type ValueListPtr    = Ptr ValueList
 
-data OConfigItem
-type OConfigItemPtr  = Ptr OConfigItem
+data ConfigValue = ConfigValueString String |
+                   ConfigValueDouble Double |
+                   ConfigValueBool   Bool
+                 deriving(Eq, Show)
+instance Storable ConfigValue where
+  alignment _ = #{alignment oconfig_value_t}
+  sizeOf _    = #{size oconfig_value_t}
+  peek p      = do
+    unionType  <- #{peek oconfig_value_t, type} p
+
+    case (mkInt unionType) of
+      0 -> do
+        unionValue <- #{peek oconfig_value_t, value} p
+
+        ConfigValueString <$>
+          (peekCString $ #{ptr oconfig_value_t, value}  unionValue)
+      1 -> ConfigValueDouble <$>
+           (mkDbl <$> #{peek oconfig_value_t, value} p)
+
+      2 -> do
+        v <- mkInt <$> #{peek oconfig_value_t, value} p
+        return $ ConfigValueBool $ case v of
+          0 -> False
+          1 -> True
+
+data ConfigItem = ConfigItem
+    { cfgItemKey      :: !String
+    , cfgItemValues   :: ![ConfigValue]
+    , cfgItemChildren :: ![ConfigItem]
+    } deriving(Eq, Show)
+
+type ConfigItemPtr  = Ptr ConfigItem
+
+instance Storable ConfigItem where
+  alignment _ = #{alignment oconfig_item_t}
+  sizeOf _    = #{size oconfig_item_t}
+  peek p      = do
+    keyPtr         <- #{peek oconfig_item_t, key} p
+    key            <- peekCString keyPtr
+    numberOfValues <- mkInt <$> #{peek oconfig_item_t, values_num} p
+    numberOfItems  <- mkInt <$> #{peek oconfig_item_t, children_num} p
+
+    valuesPtr      <- #{peek oconfig_item_t, values} p
+    values         <- peekArray numberOfValues valuesPtr
+
+    childrenPtr    <- #{peek oconfig_item_t, children} p
+    children       <- peekArray numberOfItems childrenPtr
+
+    return $ ConfigItem key values children
+
+
+
 
 type CallbackFn      = CString -> CString -> CInt
-type ConfigFn        = OConfigItemPtr -> CInt
+type ConfigFn        = ConfigItemPtr -> CInt
 
 type ConfigCallbackFn =
-  OConfigItemPtr
+  ConfigItemPtr
   -> IO CInt
 
 type WriteCallbackFn  =
