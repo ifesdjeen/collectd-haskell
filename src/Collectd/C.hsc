@@ -25,6 +25,10 @@ type GaugeT    = CDouble
 type DeriveT   = CLong
 type AbsoluteT = CULong
 
+-- |
+-- | Data Types
+-- |
+
 data DataSet = DataSet
     { dstType :: !String
     , dstDs   :: ![DataSource]
@@ -72,21 +76,50 @@ type ValueListPtr    = Ptr ValueList
 data OConfigItem
 type OConfigItemPtr  = Ptr OConfigItem
 
-type CallbackFn     = CString -> CString -> CInt
+type CallbackFn      = CString -> CString -> CInt
 type ConfigFn        = OConfigItemPtr -> CInt
-type WriteCallbackFn = DataSetPtr -> ValueListPtr -> UserDataPtr -> IO CInt
 
+type ConfigCallbackFn =
+  OConfigItemPtr
+  -> IO CInt
+
+type WriteCallbackFn  =
+  DataSetPtr
+  -> ValueListPtr
+  -> UserDataPtr
+  -> IO CInt
 
 foreign import ccall safe "collectd/plugin.h plugin_register_config"
-  plugin_register_config :: CString -> FunPtr CallbackFn -> FunPtr CallbackFn -> Ptr CString -> IO CInt
+  plugin_register_config ::
+    CString
+    -> FunPtr CallbackFn
+    -> FunPtr CallbackFn
+    -> Ptr CString
+    -> IO CInt
 
 foreign import ccall safe "collectd/plugin.h plugin_register_complex_config"
-  plugin_register_complex_config :: CString -> FunPtr OConfigItemPtr -> IO CInt
+  plugin_register_complex_config ::
+    CString
+    -> FunPtr ConfigCallbackFn
+    -> IO CInt
 
 foreign import ccall safe "collectd/plugin.h plugin_register_write"
-  plugin_register_write :: CString -> FunPtr WriteCallbackFn -> UserDataPtr -> IO CInt
+  plugin_register_write ::
+    CString
+    -> FunPtr WriteCallbackFn
+    -> UserDataPtr
+    -> IO CInt
 
-foreign import ccall safe "wrapper" mkWcb :: WriteCallbackFn -> IO (FunPtr WriteCallbackFn)
+-- |
+-- | Wrapper funcitons for converting Haskell functions into C callbacks
+-- |
+foreign import ccall safe "wrapper"
+  makeWriteCallbackFn :: WriteCallbackFn -> IO (FunPtr WriteCallbackFn)
+
+foreign import ccall safe "wrapper"
+  makeConfigCallbackFn :: ConfigCallbackFn -> IO (FunPtr ConfigCallbackFn)
+
+
 
 
 -- int plugin_register_config (const char *name,

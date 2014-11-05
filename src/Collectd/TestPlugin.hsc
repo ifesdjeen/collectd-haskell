@@ -9,25 +9,34 @@ import Foreign.Ptr
 import Foreign.C.String
 import Foreign.Storable
 
-wcb :: C.WriteCallbackFn
-wcb a b c = do
-  print "YOYO"
+writeCallback :: C.WriteCallbackFn
+writeCallback a b c = do
+  -- print "YOYO"
   peek a >>= print
-  print "YOYO22"
-  -- print a
-  -- print b
-  -- print c
+  -- print "YOYO22"
+
   return 1
 
+configCallback :: C.ConfigCallbackFn
+configCallback config = do
+  print $ config
+
+  return 0
+
 foreign export ccall module_register :: IO ()
+
 module_register :: IO ()
 module_register = do
   print rtsSupportsBoundThreads
 
-
   print "FIRST STEP12312"
-  wcb'  <- C.mkWcb wcb
-  name' <- newCString "test_plugin"
-  _     <- C.plugin_register_write name' wcb' nullPtr
+  writeCallbackFn   <- C.makeWriteCallbackFn writeCallback
+  configCallbackFn  <- C.makeConfigCallbackFn configCallback
+
+  callbackName <- newCString "test_plugin"
+
+  _     <- C.plugin_register_complex_config callbackName configCallbackFn
+  _     <- C.plugin_register_write callbackName writeCallbackFn nullPtr
+
 
   return ()
