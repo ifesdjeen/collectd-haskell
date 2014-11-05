@@ -11,15 +11,14 @@ import Foreign.Storable
 
 writeCallback :: C.WriteCallbackFn
 writeCallback a b c = do
-  -- print "YOYO"
-  peek a >>= print
-  -- print "YOYO22"
+  -- peek a >>= print
 
-  return 1
+  return 0
 
 configCallback :: C.ConfigCallbackFn
 configCallback config = do
-  print $ config
+  print "asd"
+  peek config >>= print
 
   return 0
 
@@ -27,9 +26,6 @@ foreign export ccall module_register :: IO ()
 
 module_register :: IO ()
 module_register = do
-  print rtsSupportsBoundThreads
-
-  print "FIRST STEP12312"
   writeCallbackFn   <- C.makeWriteCallbackFn writeCallback
   configCallbackFn  <- C.makeConfigCallbackFn configCallback
 
