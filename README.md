@@ -1,6 +1,6 @@
 # Collectd Haskell
 
-Haskell bindings for (Collectd)[https://github.com/collectd/collectd].
+Haskell bindings for [Collectd](https://github.com/collectd/collectd).
 
 # Building
 
