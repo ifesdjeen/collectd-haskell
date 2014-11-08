@@ -17,6 +17,7 @@ import Control.Applicative
 #include <collectd.h>
 #include <plugin.h>
 #include <liboconfig/oconfig.h>
+#include <custom.h>
 
 #let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 
@@ -67,7 +68,26 @@ instance Storable DataSource where
       `apDbl` #{peek data_source_t, max}  p
   poke p      = undefined
 
-data UserData
+type FreeFn = Ptr () -> IO ()
+
+data UserData = UserData
+    { udData    :: Ptr ()
+    , udFreeFn  :: FunPtr FreeFn
+    } deriving(Eq, Show)
+
+instance Storable UserData where
+  alignment _ = #{alignment user_data_t}
+  sizeOf _    = #{size      user_data_t}
+
+  peek p      = do
+    dataPtr <- #{peek user_data_t, data} p
+    freeFn  <- #{peek user_data_t, free_func} p
+    return $ UserData dataPtr freeFn
+
+  poke p UserData{..} = do
+    #{poke user_data_t, free_func} p udFreeFn
+    #{poke user_data_t, data} p udData
+
 type UserDataPtr     = Ptr UserData
 
 data ValueList
@@ -124,7 +144,37 @@ instance Storable ConfigItem where
     return $ ConfigItem key values children
 
 
+data Custom = Custom
+    { customName   :: !String
+    , customI      :: !Int
+    } deriving(Eq, Show)
 
+type CustomPtr = Ptr Custom
+
+instance Storable Custom where
+  alignment _ = #{alignment custom_t}
+  sizeOf _    = #{size      custom_t}
+
+  peek p      = do
+    Custom
+      `fpStr` #{ptr custom_t, name}  p
+      `apInt` #{peek custom_t, i} p
+
+  poke p Custom{..} = do
+    cCustomName     <- newCString customName
+    customNameValue <- peekArray (length customName) cCustomName
+    pokeArray (#{ptr custom_t, name} p) customNameValue
+
+    #{poke custom_t, i} p customI
+
+
+makeCustom :: Custom -> IO (Ptr Custom)
+makeCustom c = do
+  customMem <- malloc
+  _         <- memset (castPtr customMem) 0 #{size custom_t}
+  _         <- poke customMem c
+
+  return $ customMem
 
 type CallbackFn      = CString -> CString -> CInt
 type ConfigFn        = ConfigItemPtr -> CInt
@@ -164,12 +214,16 @@ foreign import ccall safe "collectd/plugin.h plugin_register_write"
 -- | Wrapper funcitons for converting Haskell functions into C callbacks
 -- |
 foreign import ccall safe "wrapper"
-  makeWriteCallbackFn :: WriteCallbackFn -> IO (FunPtr WriteCallbackFn)
+  makeWriteCallbackFn  :: WriteCallbackFn -> IO (FunPtr WriteCallbackFn)
 
 foreign import ccall safe "wrapper"
   makeConfigCallbackFn :: ConfigCallbackFn -> IO (FunPtr ConfigCallbackFn)
 
+foreign import ccall safe "wrapper"
+  makeFreeFn           :: FreeFn -> IO (FunPtr FreeFn)
 
+foreign import ccall unsafe "stdlib.h memset"
+  memset :: Ptr a -> CInt -> CSize -> IO ()
 
 
 -- int plugin_register_config (const char *name,
