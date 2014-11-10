@@ -13,9 +13,22 @@ import Foreign.Storable
 registerWriteCallback :: C.WriteCallbackFn
 registerWriteCallback dataSet userValues userData = do
   -- peek a >>= print
-  userDataVals <- peek userData
-  peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
-  -- peek userData >>= print
+  dataSetVals    <- peek dataSet
+  userDataVals   <- peek userData
+  -- peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
+
+  userValuesVals <- peek userValues
+
+  let typePointerPairs = zipWith (,)
+                         (map C.dsType (C.dstDs dataSetVals))
+                         (C.vlValues userValuesVals)
+
+  print typePointerPairs
+  vv <- mapM C.unpackValue typePointerPairs
+  print vv
+  -- vv             <- mapM (C.unpackValue (C.dsType dataSetVals)) (C.vlValues userValuesVals)
+  -- print userValuesVals
+  -- print vv
   return 0
 
 configCallback :: C.ConfigCallbackFn
