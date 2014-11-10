@@ -9,6 +9,7 @@ import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 import Data.ByteString          (ByteString, packCString)
+import Data.Word                ( Word8 )
 
 import Collectd.Internal
 import Control.Monad (forM, mapM)
@@ -21,11 +22,6 @@ import Control.Applicative
 
 #let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 
-type CounterT  = CULong
-type GaugeT    = CDouble
-type DeriveT   = CLong
-type AbsoluteT = CULong
-
 -- |
 -- | Data Types
 -- |
@@ -37,7 +33,7 @@ data DataSet = DataSet
 
 data DataSource = DataSource
     { dsName :: !String
-    , dsType :: !Int
+    , dsType :: !Int         -- | 0 - Counter | 1 - Gauge | 2 - Derive | 3 - Absolute
     , dsMin  :: !Double
     , dsMax  :: !Double
     } deriving (Eq, Show)
@@ -90,7 +86,51 @@ instance Storable UserData where
 
 type UserDataPtr     = Ptr UserData
 
-data ValueList
+data CollectdValue   = CounterT  Int
+                     | GaugeT    Double
+                     | DeriveT   Int
+                     | AbsoluteT Int
+                     deriving(Eq, Show)
+
+type CollectdValuePtr =  Ptr ()
+
+unpackValue :: (Int, CollectdValuePtr) -> IO CollectdValue
+unpackValue (tp, ptr) =
+  case tp of
+    0 -> CounterT  <$> mkInt <$> peek (castPtr ptr)
+    1 -> GaugeT    <$> mkDbl <$> peek (castPtr ptr)
+    2 -> DeriveT   <$> mkInt <$> peek (castPtr ptr)
+    3 -> AbsoluteT <$> mkInt <$> peek (castPtr ptr)
+
+data ValueList = ValueList
+    { vlHost           :: !String
+    , vlPlugin         :: !String
+    , vlPluginInstance :: !String
+    , vlType           :: !String
+    , vlTypeInstance   :: !String
+    -- , vlMetaData       :: !String
+    , vlTime           :: !Int
+    , vlInterval       :: !Int
+    , vlValues         :: ![CollectdValuePtr]
+    } deriving(Eq, Show)
+
+instance Storable ValueList where
+  alignment _ = #{alignment value_list_t}
+  sizeOf _    = #{size      value_list_t}
+
+  peek p      = do
+    ValueList
+      `fpStr` #{ptr   value_list_t, host}             p
+      `apStr` #{ptr   value_list_t, plugin}           p
+      `apStr` #{ptr   value_list_t, plugin_instance}  p
+      `apStr` #{ptr   value_list_t, type}             p
+      `apStr` #{ptr   value_list_t, type_instance}    p
+      `apInt` #{peek  value_list_t, time}             p
+      `apInt` #{peek  value_list_t, interval}         p
+      `apArr` (#{peek value_list_t, values_len}       p,
+               #{peek value_list_t, values}           p)
+
+
 type ValueListPtr    = Ptr ValueList
 
 data ConfigValue = ConfigValueString String |
