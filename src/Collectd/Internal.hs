@@ -37,10 +37,15 @@ cIntToInt = fromIntegral
 {-# INLINE cIntToInt #-}
 
 
-infixl 4 `apInt`, `apDbl`, `fpStr`, `apArr`
+infixl 4 `apInt`, `apDbl`, `fpStr`, `apArr`, `apStr`
 
-fpStr :: (String -> b) -> CString -> IO b
+fpStr :: (String -> b)    -> CString    -> IO b
 fpStr a b = a <$> (peekCString b)
+
+apStr :: IO (String -> b) -> CString -> IO b
+apStr a b = a <*> (peekCString b)
+
+-- apStr a b = a <*> (peekCString <$> b)
 
 peekCArray :: (Storable a) => CInt -> IO (Ptr a) -> IO [a]
 peekCArray i ir = ir >>= peekArray (mkInt i)
