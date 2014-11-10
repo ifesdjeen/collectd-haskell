@@ -170,8 +170,7 @@ instance Storable Custom where
 
 makeCustom :: Custom -> IO (Ptr Custom)
 makeCustom c = do
-  customMem <- malloc
-  _         <- memset (castPtr customMem) 0 #{size custom_t}
+  customMem <- calloc
   _         <- poke customMem c
 
   return $ customMem
@@ -214,16 +213,30 @@ foreign import ccall safe "collectd/plugin.h plugin_register_write"
 -- | Wrapper funcitons for converting Haskell functions into C callbacks
 -- |
 foreign import ccall safe "wrapper"
-  makeWriteCallbackFn  :: WriteCallbackFn -> IO (FunPtr WriteCallbackFn)
+  makeWriteCallbackFn  :: WriteCallbackFn  -> IO (FunPtr WriteCallbackFn)
 
 foreign import ccall safe "wrapper"
   makeConfigCallbackFn :: ConfigCallbackFn -> IO (FunPtr ConfigCallbackFn)
 
 foreign import ccall safe "wrapper"
-  makeFreeFn           :: FreeFn -> IO (FunPtr FreeFn)
+  makeFreeFn           :: FreeFn           -> IO (FunPtr FreeFn)
 
-foreign import ccall unsafe "stdlib.h memset"
-  memset :: Ptr a -> CInt -> CSize -> IO ()
+
+{-# INLINE fillBytes #-}
+fillBytes               :: Ptr a -> Word8 -> Int -> IO ()
+fillBytes dest char size = do
+  _ <- memset dest (fromIntegral char) (fromIntegral size)
+  return ()
+
+{-# INLINE calloc #-}
+calloc                  :: Storable a => IO (Ptr a)
+calloc                   = doCalloc undefined
+  where
+    doCalloc       :: Storable b => b -> IO (Ptr b)
+    doCalloc dummy  = _calloc (fromIntegral (sizeOf dummy))
+
+foreign import ccall unsafe "stdlib.h calloc"  _calloc  ::          CSize -> IO (Ptr a)
+foreign import ccall unsafe "string.h" memset  :: Ptr a -> CInt  -> CSize -> IO ()
 
 
 -- int plugin_register_config (const char *name,

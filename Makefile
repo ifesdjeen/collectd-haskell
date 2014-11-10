@@ -1,5 +1,5 @@
 GHC           = ghc
-GHC_VERSION   = 7.8.3
+GHC_VERSION  ?= 7.8.3
 COLLECTD_LIB ?= ${HOME}/opt/collectd/lib/collectd
 
 dist/build/Collectd/C_stub.h: src/Collectd/C.hsc

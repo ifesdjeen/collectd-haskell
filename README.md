@@ -23,11 +23,10 @@ make install_plugin
 
 # Pitfalls
 
-  * If your GHC version is anything but 7.8.3, it won't build. For now, even GHC
-    version is hardcoded. You'd have to fix Makefile for youself (or send
-    a patch with a configuration option)
+  * If your GHC version is anything but 7.8.3, you'll have to pass a `GHC_VERSION` to make.
   * If your collectd is located anywhere but `~/opt/collectd`, you'd have to pass
     a `COLLECTD_LIB` option to make.
+
 
 # License
 
