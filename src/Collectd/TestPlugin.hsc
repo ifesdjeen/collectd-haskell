@@ -10,33 +10,31 @@ import Foreign.Ptr
 import Foreign.C.String
 import Foreign.Storable
 
+-- declareMVar or TVar
+
 registerWriteCallback :: C.WriteCallbackFn
-registerWriteCallback dataSet userValues userData = do
+registerWriteCallback dataSet valueList userData = do
   -- peek a >>= print
-  dataSetVals    <- peek dataSet
-  userDataVals   <- peek userData
-  -- peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
+  -- dataSetVals    <- peek dataSet
+  -- userDataVals   <- peek userData
+  -- -- peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
 
-  userValuesVals <- peek userValues
+  -- valueListVals <- peek valueList
 
-  let typePointerPairs = zipWith (,)
-                         (map C.dsType (C.dstDs dataSetVals))
-                         (C.vlValues userValuesVals)
+  -- let typePointerPairs = zipWith (,)
+  --                        (map C.dsType (C.dstDs dataSetVals))
+  --                        (C.vlValues valueListVals)
 
-  -- print typePointerPairs
-  vv <- mapM C.unpackValue typePointerPairs
-  print dataSetVals
-  print vv
-  -- vv             <- mapM (C.unpackValue (C.dsType dataSetVals)) (C.vlValues userValuesVals)
-  -- print userValuesVals
-  -- print vv
+  -- -- print typePointerPairs
+  -- vv <- mapM C.unpackValue typePointerPairs
+  -- print ("=======================" ++ "\n" ++ (show dataSetVals) ++ "\n" ++ (show valueListVals) ++ "\n" ++ (show vv) ++ "\n")
+
+  C.unpackValueList dataSet valueList >>= print
   return 0
 
 configCallback :: C.ConfigCallbackFn
 configCallback config = do
-  print "asd"
   peek config >>= print
-
   return 0
 
 foreign export ccall module_register :: IO ()

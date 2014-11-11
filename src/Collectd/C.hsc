@@ -5,15 +5,18 @@
 
 module Collectd.C where
 
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
-import Data.ByteString          (ByteString, packCString)
-import Data.Word                ( Word8 )
+import           Foreign
+import           Foreign.C.Types
+import           Foreign.C.String
 
-import Collectd.Internal
-import Control.Monad (forM, mapM)
-import Control.Applicative
+import           Data.Word                ( Word8(..) )
+
+import           Collectd.Internal
+import           Collectd.Types
+
+import qualified Data.Map                as Map
+import           Control.Monad           (forM, mapM)
+import           Control.Applicative
 
 #include <collectd.h>
 #include <plugin.h>
@@ -86,12 +89,6 @@ instance Storable UserData where
 
 type UserDataPtr     = Ptr UserData
 
-data CollectdValue   = CounterT  Int
-                     | GaugeT    Double
-                     | DeriveT   Int
-                     | AbsoluteT Int
-                     deriving(Eq, Show)
-
 type CollectdValuePtr =  Ptr ()
 
 unpackValue :: (Int, CollectdValuePtr) -> IO CollectdValue
@@ -102,7 +99,7 @@ unpackValue (tp, ptr) =
     2 -> DeriveT   <$> mkInt <$> peek (castPtr ptr)
     3 -> AbsoluteT <$> mkInt <$> peek (castPtr ptr)
 
-data ValueList = ValueList
+data RawValueList = RawValueList
     { vlHost           :: !String
     , vlPlugin         :: !String
     , vlPluginInstance :: !String
@@ -114,7 +111,26 @@ data ValueList = ValueList
     , vlValues         :: ![CollectdValuePtr]
     } deriving(Eq, Show)
 
-instance Storable ValueList where
+unpackValueList :: DataSetPtr -> RawValueListPtr -> IO ValueList
+unpackValueList dataSetPtr rawValueListPtr = do
+  DataSet{..}      <- peek dataSetPtr
+  RawValueList{..} <- peek rawValueListPtr
+  let valuePointerPairs = zipWith (,)
+                          (map dsType dstDs)
+                          vlValues
+  values <- mapM unpackValue valuePointerPairs
+  return $ ValueList
+    vlHost
+    vlPlugin
+    vlPluginInstance
+    vlType
+    vlTypeInstance
+    vlInterval
+    vlTime
+    (Map.fromList (zipWith (,) (map dsName dstDs) values))
+
+
+instance Storable RawValueList where
   alignment _ = #{alignment value_list_t}
   sizeOf _    = #{size      value_list_t}
 
@@ -122,10 +138,10 @@ instance Storable ValueList where
     valuesLenVal <- (#{peek value_list_t, values_len} p) :: IO CInt
 
     let valuesLen = fromIntegral valuesLenVal
-        valuePtrs = map (\i -> castPtr $ plusPtr p (#{offset value_list_t, values} * i)) [0..valuesLen]
+        valuePtrs = map (\i -> castPtr $ plusPtr p (#{offset value_list_t, values} * i)) [0..(valuesLen - 1)]
         valuePtrsIO = return valuePtrs
 
-    ValueList
+    RawValueList
       `fpStr` #{ptr   value_list_t, host}             p
       `apStr` #{ptr   value_list_t, plugin}           p
       `apStr` #{ptr   value_list_t, plugin_instance}  p
@@ -136,7 +152,7 @@ instance Storable ValueList where
       <*>     valuePtrsIO
 
 
-type ValueListPtr    = Ptr ValueList
+type RawValueListPtr    = Ptr RawValueList
 
 data ConfigValue = ConfigValueString String |
                    ConfigValueDouble Double |
@@ -229,7 +245,7 @@ type ConfigCallbackFn =
 
 type WriteCallbackFn  =
   DataSetPtr
-  -> ValueListPtr
+  -> RawValueListPtr
   -> UserDataPtr
   -> IO CInt
 
