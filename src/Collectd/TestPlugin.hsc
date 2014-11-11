@@ -23,8 +23,9 @@ registerWriteCallback dataSet userValues userData = do
                          (map C.dsType (C.dstDs dataSetVals))
                          (C.vlValues userValuesVals)
 
-  print typePointerPairs
+  -- print typePointerPairs
   vv <- mapM C.unpackValue typePointerPairs
+  print dataSetVals
   print vv
   -- vv             <- mapM (C.unpackValue (C.dsType dataSetVals)) (C.vlValues userValuesVals)
   -- print userValuesVals

@@ -119,6 +119,12 @@ instance Storable ValueList where
   sizeOf _    = #{size      value_list_t}
 
   peek p      = do
+    valuesLenVal <- (#{peek value_list_t, values_len} p) :: IO CInt
+
+    let valuesLen = fromIntegral valuesLenVal
+        valuePtrs = map (\i -> castPtr $ plusPtr p (#{offset value_list_t, values} * i)) [0..valuesLen]
+        valuePtrsIO = return valuePtrs
+
     ValueList
       `fpStr` #{ptr   value_list_t, host}             p
       `apStr` #{ptr   value_list_t, plugin}           p
@@ -127,8 +133,7 @@ instance Storable ValueList where
       `apStr` #{ptr   value_list_t, type_instance}    p
       `apInt` #{peek  value_list_t, time}             p
       `apInt` #{peek  value_list_t, interval}         p
-      `apArr` (#{peek value_list_t, values_len}       p,
-               #{peek value_list_t, values}           p)
+      <*>     valuePtrsIO
 
 
 type ValueListPtr    = Ptr ValueList
