@@ -120,11 +120,11 @@ unpackValueList dataSetPtr rawValueListPtr = do
                           vlValues
   values <- mapM unpackValue valuePointerPairs
   return $ ValueList
-    vlHost
     vlPlugin
     vlPluginInstance
     vlType
     vlTypeInstance
+    vlHost
     vlInterval
     vlTime
     (Map.fromList (zipWith (,) (map dsName dstDs) values))
