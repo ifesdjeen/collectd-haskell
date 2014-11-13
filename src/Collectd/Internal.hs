@@ -20,24 +20,7 @@ mkDbl :: CDouble -> Double
 mkDbl d = realToFrac d
 {-# INLINE mkDbl #-}
 
-cSizeToInt :: CSize -> Int
-cSizeToInt = fromIntegral
-{-# INLINE cSizeToInt #-}
-
-intToCSize :: Int -> CSize
-intToCSize = fromIntegral
-{-# INLINE intToCSize #-}
-
-intToCInt :: Int -> CInt
-intToCInt = fromIntegral
-{-# INLINE intToCInt #-}
-
-cIntToInt :: CInt -> Int
-cIntToInt = fromIntegral
-{-# INLINE cIntToInt #-}
-
-
-infixl 4 `apInt`, `apDbl`, `fpStr`, `apArr`, `apStr`
+infixl 4 `apInt`, `apDbl`, `fpStr`, `apArr`, `apStr`, `apULong`, `apIntegral`, `apTs`
 
 fpStr :: (String -> b)    -> CString    -> IO b
 fpStr a b = a <$> (peekCString b)
