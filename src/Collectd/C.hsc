@@ -136,10 +136,11 @@ instance Storable RawValueList where
 
   peek p      = do
     valuesLenVal <- (#{peek value_list_t, values_len} p) :: IO CInt
-
-    let valuesLen = fromIntegral valuesLenVal
-        valuePtrs = map (\i -> castPtr $ plusPtr p (#{offset value_list_t, values} * i)) [0..(valuesLen - 1)]
-        valuePtrsIO = return valuePtrs
+    valuesPtr    <- #{peek value_list_t, values} p
+    let valuesLen    = fromIntegral valuesLenVal
+        getValueAt i = plusPtr valuesPtr (#{offset value_list_t, values} + #{size value_t} * i)
+        valuePtrs    = map getValueAt [0..(valuesLen - 1)]
+        valuePtrsIO  = return valuePtrs
 
     RawValueList
       `fpStr` #{ptr   value_list_t, host}             p
