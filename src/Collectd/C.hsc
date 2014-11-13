@@ -9,7 +9,7 @@ import           Foreign
 import           Foreign.C.Types
 import           Foreign.C.String
 
-import           Data.Word                ( Word8(..) )
+import           Data.Word                ( Word8(..), Word64(..))
 
 import           Collectd.Internal
 import           Collectd.Types
@@ -106,8 +106,8 @@ data RawValueList = RawValueList
     , vlType           :: !String
     , vlTypeInstance   :: !String
     -- , vlMetaData       :: !String
-    , vlTime           :: !Int
-    , vlInterval       :: !Int
+    , vlTime           :: !Word64
+    , vlInterval       :: !Word64
     , vlValues         :: ![CollectdValuePtr]
     } deriving(Eq, Show)
 
@@ -137,6 +137,7 @@ instance Storable RawValueList where
   peek p      = do
     valuesLenVal <- (#{peek value_list_t, values_len} p) :: IO CInt
     valuesPtr    <- #{peek value_list_t, values} p
+
     let valuesLen    = fromIntegral valuesLenVal
         getValueAt i = plusPtr valuesPtr (#{offset value_list_t, values} + #{size value_t} * i)
         valuePtrs    = map getValueAt [0..(valuesLen - 1)]
@@ -148,9 +149,9 @@ instance Storable RawValueList where
       `apStr` #{ptr   value_list_t, plugin_instance}  p
       `apStr` #{ptr   value_list_t, type}             p
       `apStr` #{ptr   value_list_t, type_instance}    p
-      `apInt` #{peek  value_list_t, time}             p
-      `apInt` #{peek  value_list_t, interval}         p
-      <*>     valuePtrsIO
+      `apTs`  #{peek  value_list_t, time}             p
+      `apTs`  #{peek  value_list_t, interval}         p
+      <*>       valuePtrsIO
 
 
 type RawValueListPtr    = Ptr RawValueList

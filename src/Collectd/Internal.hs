@@ -41,7 +41,18 @@ apArr f (i, b) = do
   return $ f' r
 
 apInt :: (Applicative f) => f (Int -> b) -> f CInt -> f b
-apInt a b = a <*> (mkInt <$> b)
+apInt a b = a <*> (fromIntegral <$> b)
+
+apULong :: (Applicative f)                       => f (Int -> b) -> f CULong -> f b
+apULong a b = a <*> (fromIntegral <$> b)
+
+apIntegral :: (Applicative f, Integral i, Num n) => f (n -> b) -> f i -> f b
+apIntegral a b = a <*> (fromIntegral <$> b)
+
+apTs :: (Applicative f) => f (Word64 -> b) -> f CULong -> f b
+apTs a b = a <*> (op <$> b)
+  where op i = ceiling $ (fromIntegral i) / 1073741.824 -- 2^30 = 1073741824
+
 
 apDbl :: (Applicative f) => f (Double -> b) -> f CDouble -> f b
-apDbl a b = a <*> (mkDbl <$> b)
+apDbl a b = a <*> (realToFrac <$> b)
