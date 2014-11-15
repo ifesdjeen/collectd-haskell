@@ -2,6 +2,7 @@ module Collectd.Types where
 
 import qualified Data.Map as Map
 import           Data.Word                ( Word64(..))
+
 data CollectdValue =
      CounterT    Int
      | GaugeT    Double
