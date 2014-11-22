@@ -239,7 +239,7 @@ makeCustom c = do
   return $ customMem
 
 type CallbackFn      = CString -> CString -> CInt
-type ConfigFn        = ConfigItemPtr -> CInt
+type FlushFn         = CString -> CULong -> CString -> IO CInt
 
 type ConfigCallbackFn =
   ConfigItemPtr
@@ -265,6 +265,13 @@ foreign import ccall safe "collectd/plugin.h plugin_register_complex_config"
     -> FunPtr ConfigCallbackFn
     -> IO CInt
 
+foreign import ccall safe "collectd/plugin.h plugin_register_flush"
+  plugin_register_flush ::
+    CString
+    -> FunPtr FlushFn
+    -> UserDataPtr
+    -> IO CInt
+
 foreign import ccall safe "collectd/plugin.h plugin_register_write"
   plugin_register_write ::
     CString
@@ -280,6 +287,9 @@ foreign import ccall safe "wrapper"
 
 foreign import ccall safe "wrapper"
   makeConfigCallbackFn :: ConfigCallbackFn -> IO (FunPtr ConfigCallbackFn)
+
+foreign import ccall safe "wrapper"
+  makeFlushFn          :: FlushFn          -> IO (FunPtr FlushFn)
 
 foreign import ccall safe "wrapper"
   makeFreeFn           :: FreeFn           -> IO (FunPtr FreeFn)
