@@ -20,24 +20,28 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.Map              as Map
 
 toDbValue :: CollectdValue -> Continuum.DbValue
-toDbValue (GaugeT v) = Continuum.DbInt (ceiling v)
+toDbValue (GaugeT     v) = Continuum.DbDouble v
+toDbValue (CounterT   v) = Continuum.DbInt (fromIntegral v)
+toDbValue (DeriveT    v) = Continuum.DbInt (fromIntegral v)
+toDbValue (AbsoluteT  v) = Continuum.DbInt (fromIntegral v)
 toDbValue _ = undefined
 
 write :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> C.WriteCallbackFn
 write client state flushCounter dataSet valueList userData = do
   print "writing"
   values    <- C.unpackValueList dataSet valueList
+  print values
   let sendData ValueList{..} =
         mapM (\(_, v) ->
                (swap state
                 (\oldSt ->
                   (Continuum.Insert
-                  "memory"
-                  (Continuum.makeRecord
-                   (fromIntegral vTime)
-                   [("host",    DbString (B.pack vHost))
-                   ,("subtype", DbString (B.pack vTypeInstance))
-                   ,("value",   toDbValue v)]))
+                   (B.pack vType)
+                   (Continuum.makeRecord
+                    (fromIntegral vTime)
+                    [("host",    DbString (B.pack vHost))
+                    ,("subtype", DbString (B.pack vTypeInstance))
+                    ,("value",   toDbValue v)]))
                   : oldSt
                 )))  (Map.toList vValues)
   _         <- sendData values
@@ -60,6 +64,7 @@ write client state flushCounter dataSet valueList userData = do
   -- _         <- sendData values
 
   return 0
+
 
 flush :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> IO ()
 flush client state flushCounter = do
@@ -93,12 +98,36 @@ memorySchema =
                        , ("value",   Continuum.DbtInt)
                        , ("subtype", Continuum.DbtString) ]
 
+memoryPercentSchema =
+  Continuum.makeSchema [ ("host",    Continuum.DbtString)
+                       , ("value",   Continuum.DbtDouble)
+                       , ("subtype", Continuum.DbtString) ]
+
+cpuSchema =
+  Continuum.makeSchema [ ("host",    Continuum.DbtString)
+                       , ("value",   Continuum.DbtDouble)
+                       , ("subtype", Continuum.DbtString) ]
+
+networkSchema =
+  Continuum.makeSchema [ ("host",    Continuum.DbtString)
+                       , ("value",   Continuum.DbtInt)
+                       , ("subtype", Continuum.DbtString) ]
+
+tcpSchema =
+  Continuum.makeSchema [ ("host",    Continuum.DbtString)
+                       , ("value",   Continuum.DbtInt)
+                       , ("subtype", Continuum.DbtString) ]
+
 foreign export ccall module_register :: IO ()
 
 module_register :: IO ()
 module_register = do
   client <- Continuum.connect "127.0.0.1" "5566"
-  _      <- Continuum.sendRequest client (Continuum.CreateDb "memory" memorySchema)
+  _      <- Continuum.sendRequest client (Continuum.CreateDb "system.cpu" cpuSchema)
+  _      <- Continuum.sendRequest client (Continuum.CreateDb "system.mem" memorySchema)
+  _      <- Continuum.sendRequest client (Continuum.CreateDb "system.mem.percent" memorySchema)
+  _      <- Continuum.sendRequest client (Continuum.CreateDb "system.net" networkSchema)
+  _      <- Continuum.sendRequest client (Continuum.CreateDb "system.tcp" tcpSchema)
 
   userData <- makeUserData (C.Custom "custom name" 100)
 
