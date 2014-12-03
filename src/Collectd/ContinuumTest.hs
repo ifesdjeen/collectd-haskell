@@ -21,22 +21,21 @@ import qualified Data.Map              as Map
 
 toDbValue :: CollectdValue -> Continuum.DbValue
 toDbValue (GaugeT     v) = Continuum.DbDouble v
-toDbValue (CounterT   v) = Continuum.DbInt (fromIntegral v)
-toDbValue (DeriveT    v) = Continuum.DbInt (fromIntegral v)
-toDbValue (AbsoluteT  v) = Continuum.DbInt (fromIntegral v)
+toDbValue (CounterT   v) = Continuum.DbLong (fromIntegral v)
+toDbValue (DeriveT    v) = Continuum.DbLong (fromIntegral v)
+toDbValue (AbsoluteT  v) = Continuum.DbLong (fromIntegral v)
 toDbValue _ = undefined
 
 write :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> C.WriteCallbackFn
 write client state flushCounter dataSet valueList userData = do
-  print "writing"
   values    <- C.unpackValueList dataSet valueList
-  print values
+
   let sendData ValueList{..} =
         mapM (\(_, v) ->
                (swap state
                 (\oldSt ->
                   (Continuum.Insert
-                   (B.pack vType)
+                   (B.pack vPluginInstance)
                    (Continuum.makeRecord
                     (fromIntegral vTime)
                     [("host",    DbString (B.pack vHost))
@@ -48,7 +47,8 @@ write client state flushCounter dataSet valueList userData = do
 
   _ <- swap flushCounter (+ 1)
   currentCounter <- atomRead flushCounter
-  when (currentCounter > 5) (flush client state flushCounter)
+
+  when (currentCounter > 50) (flush client state flushCounter)
 
   -- let sendData ValueList{..} =
   --       mapM (\(_, v) ->
@@ -95,7 +95,7 @@ configCallback config = do
 
 memorySchema =
   Continuum.makeSchema [ ("host",    Continuum.DbtString)
-                       , ("value",   Continuum.DbtInt)
+                       , ("value",   Continuum.DbtLong)
                        , ("subtype", Continuum.DbtString) ]
 
 memoryPercentSchema =
@@ -110,12 +110,12 @@ cpuSchema =
 
 networkSchema =
   Continuum.makeSchema [ ("host",    Continuum.DbtString)
-                       , ("value",   Continuum.DbtInt)
+                       , ("value",   Continuum.DbtLong)
                        , ("subtype", Continuum.DbtString) ]
 
 tcpSchema =
   Continuum.makeSchema [ ("host",    Continuum.DbtString)
-                       , ("value",   Continuum.DbtInt)
+                       , ("value",   Continuum.DbtLong)
                        , ("subtype", Continuum.DbtString) ]
 
 foreign export ccall module_register :: IO ()
