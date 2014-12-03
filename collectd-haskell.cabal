@@ -26,7 +26,7 @@ library
   exposed-modules:     Collectd.C
                        , Collectd.Internal
                        , Collectd.ContinuumTest
-                       --, Collectd.ContinuumTest
+                       --, Collectd.TestPlugin
                        , Collectd.Types
   other-extensions: CPP
                   , ForeignFunctionInterface
