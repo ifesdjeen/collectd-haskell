@@ -94,10 +94,14 @@ type CollectdValuePtr =  Ptr ()
 unpackValue :: (Int, CollectdValuePtr) -> IO CollectdValue
 unpackValue (tp, ptr) =
   case tp of
-    0 -> CounterT  <$> mkInt <$> peek (castPtr ptr)
-    1 -> GaugeT    <$> mkDbl <$> peek (castPtr ptr)
-    2 -> DeriveT   <$> mkInt <$> peek (castPtr ptr)
-    3 -> AbsoluteT <$> mkInt <$> peek (castPtr ptr)
+    0 -> CounterT  <$> cLongToLong     <$> peek (castPtr ptr)
+    1 -> GaugeT    <$> cDoubleToDouble <$> peek (castPtr ptr)
+    2 -> DeriveT   <$> cLongToLong     <$> peek (castPtr ptr)
+    3 -> AbsoluteT <$> cLongToLong     <$> peek (castPtr ptr)
+  where cLongToLong     :: CLong -> Integer
+        cLongToLong     = fromIntegral
+        cDoubleToDouble :: CDouble -> Double
+        cDoubleToDouble = realToFrac
 
 data RawValueList = RawValueList
     { vlHost           :: !String

@@ -4,10 +4,10 @@ import qualified Data.Map as Map
 import           Data.Word                ( Word64(..))
 
 data CollectdValue =
-     CounterT    Int
+     CounterT    Integer
      | GaugeT    Double
-     | DeriveT   Int
-     | AbsoluteT Int
+     | DeriveT   Integer
+     | AbsoluteT Integer
      deriving(Eq, Show)
 
 data ValueList = ValueList
