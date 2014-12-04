@@ -17,7 +17,7 @@ mkInt = fromIntegral
 {-# INLINE mkInt #-}
 
 mkDbl :: CDouble -> Double
-mkDbl d = realToFrac d
+mkDbl = realToFrac
 {-# INLINE mkDbl #-}
 
 infixl 4 `apInt`, `apDbl`, `fpStr`, `apArr`, `apStr`, `apIntegral`, `apTs`
