@@ -26,57 +26,61 @@ toDbValue (DeriveT    v) = Continuum.DbLong (fromIntegral v)
 toDbValue (AbsoluteT  v) = Continuum.DbLong (fromIntegral v)
 toDbValue _ = undefined
 
-write :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> C.WriteCallbackFn
+write :: Continuum.ContinuumClient
+         -> TVar [(DbValue,FieldName,DbValue)]
+         -> TVar Integer
+         -> C.WriteCallbackFn
+
 write client state flushCounter dataSet valueList userData = do
   values    <- C.unpackValueList dataSet valueList
+
+  -- print $ values
 
   let sendData ValueList{..} =
         mapM (\(_, v) ->
                (swap state
                 (\oldSt ->
-                  (Continuum.Insert
-                   (B.pack vPluginInstance)
-                   (Continuum.makeRecord
-                    (fromIntegral vTime)
-                    [("host",    DbString (B.pack vHost))
-                    ,("subtype", DbString (B.pack vTypeInstance))
-                    ,("value",   toDbValue v)]))
-                  : oldSt
-                )))  (Map.toList vValues)
+                  (DbString (B.pack vHost),
+                   B.pack vTypeInstance,
+                   toDbValue v) : oldSt)))
+        (Map.toList vValues)
   _         <- sendData values
 
-  _ <- swap flushCounter (+ 1)
-  currentCounter <- atomRead flushCounter
-
-  when (currentCounter > 50) (flush client state flushCounter)
 
   -- let sendData ValueList{..} =
   --       mapM (\(_, v) ->
-  --              (Continuum.sendRequest client
-  --               (Continuum.Insert
-  --                "memory"
-  --                (Continuum.makeRecord
-  --                 (fromIntegral vTime)
-  --                 [("host",    DbString (B.pack vHost))
-  --                 ,("subtype", DbString (B.pack vTypeInstance))
-  --                 ,("value",   toDbValue v)])))
-  --            )  (Map.toList vValues)
+  --              (swap state
+  --               (\oldSt ->
+  --                 (Continuum.Insert
+  --                  (B.pack vPluginInstance)
+  --                  (Continuum.makeRecord
+  --                   (fromIntegral vTime)
+  --                   [("host",    DbString (B.pack vHost))
+  --                   ,("subtype", DbString (B.pack vTypeInstance))
+  --                   ,("value",   toDbValue v)]))
+  --                 : oldSt
+  --               )))  (Map.toList vValues)
   -- _         <- sendData values
+
+  -- _ <- swap flushCounter (+ 1)
+  -- currentCounter <- atomRead flushCounter
+
+  -- when (currentCounter > 50) (flush client state flushCounter)
+
+
 
   return 0
 
 
-flush :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> IO ()
-flush client state flushCounter = do
-  requests  <- atomRead state
-  _         <- atomReset state []
-  _         <- atomReset flushCounter 0
-  _         <- mapM (\i -> do
-                        print i
-                        Continuum.sendRequest client i) requests
-
-
-  return ()
+-- flush :: Continuum.ContinuumClient -> TVar [Continuum.Request] -> TVar Integer -> IO ()
+-- flush client state flushCounter = do
+--   requests  <- atomRead state
+--   _         <- atomReset state []
+--   _         <- atomReset flushCounter 0
+--   _         <- mapM (\i -> do
+--                         print i
+--                         Continuum.sendRequest client i) requests
+-- return ()
 
 
 makeUserData :: C.Custom -> IO C.UserDataPtr
