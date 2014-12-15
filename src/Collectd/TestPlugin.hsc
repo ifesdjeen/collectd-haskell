@@ -16,8 +16,8 @@ registerWriteCallback :: C.WriteCallbackFn
 registerWriteCallback dataSet valueList userData = do
   -- peek a >>= print
   -- dataSetVals    <- peek dataSet
-  -- userDataVals   <- peek userData
-  -- -- peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
+  userDataVals   <- peek userData
+  peek ((castPtr (C.udData userDataVals)) :: Ptr C.Custom) >>= print
 
   -- valueListVals <- peek valueList
 
@@ -53,7 +53,7 @@ module_register :: IO ()
 module_register = do
   registerWriteCallbackFn  <- C.makeWriteCallbackFn registerWriteCallback
   configCallbackFn         <- C.makeConfigCallbackFn configCallback
-  userData                 <- makeUserData (C.Custom "custom name" 100)
+  userData                 <- makeUserData (C.Custom "custom name 123123" 100)
 
   callbackName <- newCString "test_plugin"
 

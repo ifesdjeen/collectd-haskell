@@ -13,13 +13,15 @@ import           Data.Word                ( Word8(..), Word64(..))
 
 import           Collectd.Internal
 import           Collectd.Types
-
+import           GHC.IO.Exception -- Required for null check until patch lands
 import qualified Data.Map                as Map
 import           Control.Monad           (forM, mapM)
 import           Control.Applicative
 
-#include <collectd.h>
-#include <plugin.h>
+
+#include <config.h>
+#include <daemon/collectd.h>
+#include <daemon/plugin.h>
 #include <liboconfig/oconfig.h>
 #include <custom.h>
 
@@ -237,7 +239,7 @@ instance Storable Custom where
 
 makeCustom :: Custom -> IO (Ptr Custom)
 makeCustom c = do
-  customMem <- calloc
+  customMem <- malloc0
   _         <- poke customMem c
 
   return $ customMem
@@ -305,12 +307,23 @@ fillBytes dest char size = do
   _ <- memset dest (fromIntegral char) (fromIntegral size)
   return ()
 
-{-# INLINE calloc #-}
-calloc                  :: Storable a => IO (Ptr a)
-calloc                   = doCalloc undefined
+{-# INLINE malloc0 #-}
+malloc0 :: Storable a => IO (Ptr a)
+malloc0 = doMalloc0 undefined
   where
-    doCalloc       :: Storable b => b -> IO (Ptr b)
-    doCalloc dummy  = _calloc (fromIntegral (sizeOf dummy))
+    doMalloc0       :: Storable b => b -> IO (Ptr b)
+    doMalloc0 dummy  = mallocBytes0 (sizeOf dummy)
+
+mallocBytes0 :: Int -> IO (Ptr a)
+mallocBytes0 size = failWhenNULL "calloc" (_calloc (fromIntegral size))
+
+failWhenNULL :: String -> IO (Ptr a) -> IO (Ptr a)
+failWhenNULL name f = do
+   addr <- f
+   if addr == nullPtr
+      then ioError (IOError Nothing ResourceExhausted name
+                                        "out of memory" Nothing Nothing)
+      else return addr
 
 foreign import ccall unsafe "stdlib.h calloc"  _calloc  ::          CSize -> IO (Ptr a)
 foreign import ccall unsafe "string.h" memset  :: Ptr a -> CInt  -> CSize -> IO ()

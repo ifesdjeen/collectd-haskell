@@ -32,7 +32,8 @@ library
                   , ForeignFunctionInterface
                   , EmptyDataDecls
                   , RecordWildCards
-  Include-dirs:    include
+  Include-dirs:    /Users/ifesdjeen/foss/c/collectd/src
+                   , ./include
   ghc-options:    -threaded -fforce-recomp -shared -dynamic -fPIC -o test_plugin.so
 
   if (arch(i386) || arch(x86_64))
