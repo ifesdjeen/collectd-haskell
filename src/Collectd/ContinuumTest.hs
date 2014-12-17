@@ -10,6 +10,7 @@ import           Foreign.C.String
 import           Foreign.Storable
 import           Continuum.Client.Base as Continuum
 import           Control.Concurrent.STM
+import           Control.Concurrent.MVar
 
 --import qualified Data.ByteString       as B
 
@@ -29,11 +30,12 @@ toDbValue (AbsoluteT  v) = Continuum.DbLong (fromIntegral v)
 toDbValue _ = undefined
 
 write :: Continuum.ContinuumClient
+         -> MVar ()
          -> TVar (Map.Map (DbValue,B.ByteString,Integer) [(FieldName, DbValue)])
          -> TVar (Maybe Integer)
          -> C.WriteCallbackFn
 
-write client state flushCounter dataSet valueList userData = do
+write client lock state flushCounter dataSet valueList userData = do
   values    <- C.unpackValueList dataSet valueList
 
   let timestamp  = fromIntegral $ vTime values
@@ -52,8 +54,8 @@ write client state flushCounter dataSet valueList userData = do
         _ <- enqueue state values
         return Nothing
 
-  print $ valuesToFlush
-  -- _ <- flush client valuesToFlush
+  -- print $ valuesToFlush
+  _ <- flush client lock valuesToFlush
 
   return 0
 
@@ -70,16 +72,19 @@ write client state flushCounter dataSet valueList userData = do
         swapCounter newv (Just _) = Just newv
 
 flush :: Continuum.ContinuumClient
+         -> MVar ()
          -> Maybe (Map.Map (DbValue,B.ByteString,Integer) [(FieldName, DbValue)])
          -> IO ()
-flush client (Just values) = do
+flush client lock (Just values) = do
+  _ <- readMVar lock
   _ <- forM_ (Map.toList values) $ \((host, collection, timestamp), values) ->
     Continuum.sendRequest client $
     Continuum.Insert collection $
     Continuum.makeRecord timestamp (("host", host) : values)
+  _ <- putMVar lock ()
 
   return ()
-flush _ _ = return ()
+flush _ _ _ = return ()
 
 --   requests  <- atomRead state
 --   _         <- atomReset state []
@@ -166,7 +171,9 @@ module_register = do
   flushState   <- atomically $ newTVar Map.empty
   flushCounter <- atomically $ newTVar Nothing
 
-  writeFn  <- C.makeWriteCallbackFn (write client flushState flushCounter)
+  lock     <- newMVar ()
+
+  writeFn  <- C.makeWriteCallbackFn (write client lock flushState flushCounter)
   configFn <- C.makeConfigCallbackFn configCallback
 
   callbackName <- newCString "test_plugin"
