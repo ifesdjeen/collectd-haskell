@@ -76,7 +76,7 @@ flush :: Continuum.ContinuumClient
          -> Maybe (Map.Map (DbValue,B.ByteString,Integer) [(FieldName, DbValue)])
          -> IO ()
 flush client lock (Just values) = do
-  _ <- readMVar lock
+  _ <- takeMVar lock
   _ <- forM_ (Map.toList values) $ \((host, collection, timestamp), values) ->
     Continuum.sendRequest client $
     Continuum.Insert collection $
