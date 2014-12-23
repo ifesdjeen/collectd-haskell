@@ -94,16 +94,6 @@ flush _ _ _ = return ()
 --                         Continuum.sendRequest client i) requests
 -- return ()
 
-
-makeUserData :: C.Custom -> IO C.UserDataPtr
-makeUserData c = do
-  userDataMem <- malloc :: IO (Ptr C.UserData)
-  custom      <- C.makeCustom c
-  freeFn      <- C.makeFreeFn (\ptr -> free (castPtr ptr))
-  poke userDataMem (C.UserData (castPtr custom) freeFn)
-  return $ userDataMem
-
-
 configCallback :: C.ConfigCallbackFn
 configCallback config = do
   peek config >>= print
@@ -159,6 +149,7 @@ foreign export ccall module_register :: IO ()
 
 module_register :: IO ()
 module_register = do
+  print "asdasd"
   client <- Continuum.connect "127.0.0.1" "5566"
   _      <- Continuum.sendRequest client (Continuum.CreateDb "system.cpu" cpuSchema)
   _      <- Continuum.sendRequest client (Continuum.CreateDb "system.mem" memorySchema)
@@ -166,9 +157,9 @@ module_register = do
   _      <- Continuum.sendRequest client (Continuum.CreateDb "system.net" networkSchema)
   _      <- Continuum.sendRequest client (Continuum.CreateDb "system.tcp" tcpSchema)
 
-  userData <- makeUserData (C.Custom "custom name" 100)
-
+  print "flush state"
   flushState   <- atomically $ newTVar Map.empty
+  print "flush counter"
   flushCounter <- atomically $ newTVar Nothing
 
   lock     <- newMVar ()
@@ -177,8 +168,7 @@ module_register = do
   configFn <- C.makeConfigCallbackFn configCallback
 
   callbackName <- newCString "test_plugin"
-  _     <- C.plugin_register_write callbackName writeFn userData
-
+  _     <- C.plugin_register_write callbackName writeFn nullPtr
   _     <- C.plugin_register_complex_config callbackName configFn
 
 
